@@ -1,0 +1,145 @@
+{*
+Example for Joystick Click
+
+    Date          : Oct 2018.
+    Author        : Nenad Filipovic
+
+Test configuration KINETIS :
+    
+    MCU              : MK64
+    Dev. Board       : HEXIWEAR
+    ARM Compiler ver : v6.0.0.0
+
+---
+
+Description :
+
+The application is composed of three sections :
+
+- System Initialization - Initializes I2C, GPIO and LOG structures, 
+     set INT pin as input, CS and RST pins as output.
+- Application Initialization - Initialization driver enable's - I2C,
+     set default configuration and start write log.
+- Application Task - (code snippet) This is a example which demonstrates the use of Joystick Click board.
+     Joystick Click communicates with register via I2C by write and read from register,
+     read joystick position and press button state.
+     Results are being sent to the Usart Terminal where you can track their changes.
+     All data logs on usb uart when the sensor is triggered.
+
+Additional Functions :
+
+- UART
+
+*}
+program Click_Joystick_KINETIS;
+
+uses Click_Joystick_types, Click_Joystick_config;
+
+var
+    position : uint8_t; 
+    buttonState : uint8_t; 
+    positionOld : uint8_t; 
+    buttonStateOld : uint8_t; 
+    
+procedure systemInit(); 
+begin
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_INT_PIN, _GPIO_INPUT); 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_INPUT); 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_RST_PIN, _GPIO_OUTPUT); 
+    mikrobus_i2cInit(_MIKROBUS1, @_JOYSTICK_I2C_CFG[0]); 
+    mikrobus_logInit(_MIKROBUS2, 9600); 
+    Delay_100ms(); 
+
+end;
+
+procedure applicationInit(); 
+begin
+
+    joystick_i2cDriverInit(T_JOYSTICK_P(@_MIKROBUS1_GPIO), T_JOYSTICK_P(@_MIKROBUS1_I2C), _JOYSTICK_I2C_ADDRESS_0); 
+    Delay_100ms(); 
+    joystick_setDefaultConfiguration(); 
+    mikrobus_logWrite('---------------------', _LOG_LINE); 
+    mikrobus_logWrite('    Configuration    ', _LOG_LINE); 
+    mikrobus_logWrite('---------------------', _LOG_LINE); 
+    mikrobus_logWrite('    Joystick Click   ', _LOG_LINE); 
+    mikrobus_logWrite('---------------------', _LOG_LINE); 
+    Delay_100ms(); 
+
+end;
+
+procedure applicationTask(); 
+begin
+
+    buttonState := joystick_pressButton(); 
+    position := joystick_getPosition(); 
+    Delay_10ms(); 
+    if (((buttonState = 1) and (buttonStateOld = 0))) then 
+    begin
+        buttonStateOld := 1; 
+        mikrobus_logWrite('  Button is pressed ', _LOG_LINE); 
+        mikrobus_logWrite('---------------------', _LOG_LINE); 
+    end; 
+    if (((buttonState = 0) and (buttonStateOld = 1))) then 
+    begin
+        buttonStateOld := 0; 
+    end; 
+    if ((positionOld <> position)) then 
+    begin
+        case position of
+            0 :
+            begin
+                mikrobus_logWrite('    Start position   ', _LOG_LINE); 
+            end;
+            1 :
+            begin
+                mikrobus_logWrite('         Top        ', _LOG_LINE); 
+            end;
+            2 :
+            begin
+                mikrobus_logWrite('      Top-Right     ', _LOG_LINE); 
+            end;
+            3 :
+            begin
+                mikrobus_logWrite('        Right       ', _LOG_LINE); 
+            end;
+            4 :
+            begin
+                mikrobus_logWrite('     Bottom-Right   ', _LOG_LINE); 
+            end;
+            5 :
+            begin
+                mikrobus_logWrite('        Bottom      ', _LOG_LINE); 
+            end;
+            6 :
+            begin
+                mikrobus_logWrite('     Bottom-Left    ', _LOG_LINE); 
+            end;
+            7 :
+            begin
+                mikrobus_logWrite('         Left       ', _LOG_LINE); 
+            end;
+            8 :
+            begin
+                mikrobus_logWrite('       Top-Left     ', _LOG_LINE); 
+            end;
+        end;
+        mikrobus_logWrite('---------------------', _LOG_LINE); 
+        positionOld := position; 
+        Delay_100ms(); 
+    end; 
+
+end;
+
+begin
+    positionOld := 1;
+    buttonStateOld := 1;
+
+    systemInit(); 
+    applicationInit(); 
+    while (1) do 
+    begin 
+        applicationTask(); 
+    end;
+
+end.

@@ -1,0 +1,121 @@
+'
+'Example for Joystick Click
+'
+'    Date          : Oct 2018.
+'    Author        : Nenad Filipovic
+'
+'Test configuration FT90x :
+'    
+'    MCU                : FT900
+'    Dev. Board         : EasyFT90x v7 
+'    FT90x Compiler ver : v2.3.0.0
+'
+'---
+'
+'Description :
+'
+'The application is composed of three sections :
+'
+'- System Initialization - Initializes I2C, GPIO and LOG structures, 
+'     set INT pin as input, CS and RST pins as output.
+'- Application Initialization - Initialization driver enable's - I2C,
+'     set default configuration and start write log.
+'- Application Task - (code snippet) This is a example which demonstrates the use of Joystick Click board.
+'     Joystick Click communicates with register via I2C by write and read from register,
+'     read joystick position and press button state.
+'     Results are being sent to the Usart Terminal where you can track their changes.
+'     All data logs on usb uart when the sensor is triggered.
+'
+'Additional Functions :
+'
+'- UART
+'
+'
+program Click_Joystick_FT90x
+
+include Click_Joystick_types
+include Click_Joystick_config
+
+dim
+    position as uint8_t 
+    buttonState as uint8_t 
+    positionOld as uint8_t 
+    buttonStateOld as uint8_t 
+    
+sub procedure systemInit() 
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_INT_PIN, _GPIO_INPUT) 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_CS_PIN, _GPIO_INPUT) 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_RST_PIN, _GPIO_OUTPUT) 
+    mikrobus_i2cInit(_MIKROBUS1, @_JOYSTICK_I2C_CFG[0]) 
+    mikrobus_logInit(_MIKROBUS2, 9600) 
+    Delay_100ms() 
+
+end sub
+
+sub procedure applicationInit() 
+
+    joystick_i2cDriverInit(T_JOYSTICK_P(@_MIKROBUS1_GPIO), T_JOYSTICK_P(@_MIKROBUS1_I2C), _JOYSTICK_I2C_ADDRESS_0) 
+    Delay_100ms() 
+    joystick_setDefaultConfiguration() 
+    mikrobus_logWrite("---------------------", _LOG_LINE) 
+    mikrobus_logWrite("    Configuration    ", _LOG_LINE) 
+    mikrobus_logWrite("---------------------", _LOG_LINE) 
+    mikrobus_logWrite("    Joystick Click   ", _LOG_LINE) 
+    mikrobus_logWrite("---------------------", _LOG_LINE) 
+    Delay_100ms() 
+
+end sub
+
+sub procedure applicationTask() 
+
+    buttonState = joystick_pressButton() 
+    position = joystick_getPosition() 
+    Delay_10ms() 
+    if (((buttonState = 1) and (buttonStateOld = 0))) then 
+        buttonStateOld = 1 
+        mikrobus_logWrite("  Button is pressed ", _LOG_LINE) 
+        mikrobus_logWrite("---------------------", _LOG_LINE) 
+    end if
+    if (((buttonState = 0) and (buttonStateOld = 1))) then 
+        buttonStateOld = 0 
+    end if
+    if ((positionOld <> position)) then 
+        select case position
+            case 0
+                mikrobus_logWrite("    Start position   ", _LOG_LINE) 
+            case 1
+                mikrobus_logWrite("         Top        ", _LOG_LINE) 
+            case 2
+                mikrobus_logWrite("      Top-Right     ", _LOG_LINE) 
+            case 3
+                mikrobus_logWrite("        Right       ", _LOG_LINE) 
+            case 4
+                mikrobus_logWrite("     Bottom-Right   ", _LOG_LINE) 
+            case 5
+                mikrobus_logWrite("        Bottom      ", _LOG_LINE) 
+            case 6
+                mikrobus_logWrite("     Bottom-Left    ", _LOG_LINE) 
+            case 7
+                mikrobus_logWrite("         Left       ", _LOG_LINE) 
+            case 8
+                mikrobus_logWrite("       Top-Left     ", _LOG_LINE) 
+        end select
+        mikrobus_logWrite("---------------------", _LOG_LINE) 
+        positionOld = position 
+        Delay_100ms() 
+    end if
+
+end sub
+
+main :
+    positionOld = 1
+    buttonStateOld = 1
+
+    systemInit() 
+    applicationInit() 
+    while (1) 
+        applicationTask() 
+    wend
+
+end.
